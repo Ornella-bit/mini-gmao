@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Modifier un équipement</h1>
+<form method="post">
+    <p><label>Nom<br>
+        <input type="text" name="nom" value="{{ equipement['nom'] }}" required></label></p>
+    <p><label>Catégorie<br>
+        <input type="text" name="categorie" value="{{ equipement['categorie'] }}" required></label></p>
+    <p><label>Lieu<br>
+        <select name="lieu_id" required>
+            {% for l in lieux %}
+            <option value="{{ l['id'] }}" {% if l['id'] == equipement['lieu_id'] %}selected{% endif %}>{{ l['nom'] }}</option>
+            {% endfor %}
+        </select>
+    </label></p>
+    <p><label>État<br>
+        <select name="etat">
+            {% for e in ["En service", "En panne", "Hors service"] %}
+            <option {% if e == equipement['etat'] %}selected{% endif %}>{{ e }}</option>
+            {% endfor %}
+        </select>
+    </label></p>
+    <p><label>Date d'installation<br>
+        <input type="date" name="date_installation" value="{{ equipement['date_installation'] or '' }}"></label></p>
+    <button type="submit">Enregistrer</button>
+    <a href="{{ url_for('liste_equipements') }}">Annuler</a>
+</form>
+{% endblock %}

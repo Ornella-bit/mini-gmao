@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, abort
 
 DB = Path(__file__).parent / "gmao.db"
 
@@ -55,6 +55,49 @@ def ajouter_equipement():
     lieux = connexion.execute("SELECT id, nom FROM lieux ORDER BY nom").fetchall()
     connexion.close()
     return render_template("ajouter_equipement.html", lieux=lieux)
+
+@app.route("/equipements/<int:equipement_id>/modifier", methods=["GET", "POST"])
+def modifier_equipement(equipement_id):
+    connexion = get_db()
+    equipement = connexion.execute(
+        "SELECT * FROM equipements WHERE id = ?", (equipement_id,)
+    ).fetchone()
+    if equipement is None:
+        connexion.close()
+        abort(404)
+
+    if request.method == "POST":
+        nom = request.form["nom"].strip()
+        categorie = request.form["categorie"].strip()
+        if nom and categorie:
+            connexion.execute(
+                "UPDATE equipements SET nom = ?, categorie = ?, lieu_id = ?, "
+                "etat = ?, date_installation = ? WHERE id = ?",
+                (
+                    nom,
+                    categorie,
+                    request.form["lieu_id"],
+                    request.form["etat"],
+                    request.form["date_installation"] or None,
+                    equipement_id,
+                ),
+            )
+            connexion.commit()
+            connexion.close()
+            return redirect(url_for("liste_equipements"))
+
+    lieux = connexion.execute("SELECT id, nom FROM lieux ORDER BY nom").fetchall()
+    connexion.close()
+    return render_template("modifier_equipement.html", equipement=equipement, lieux=lieux)
+
+
+@app.route("/equipements/<int:equipement_id>/supprimer", methods=["POST"])
+def supprimer_equipement(equipement_id):
+    connexion = get_db()
+    connexion.execute("DELETE FROM equipements WHERE id = ?", (equipement_id,))
+    connexion.commit()
+    connexion.close()
+    return redirect(url_for("liste_equipements"))
 
 if __name__ == "__main__":
     app.run(debug=True)
