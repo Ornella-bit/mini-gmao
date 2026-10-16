@@ -3,7 +3,7 @@
 <h1>Stock de pièces</h1>
 <p><a href="{{ url_for('ajouter_piece') }}">+ Ajouter une pièce</a></p>
 <table border="1" cellpadding="6">
-    <tr><th>Pièce</th><th>Référence</th><th>Quantité</th><th>Seuil d'alerte</th><th>Réapprovisionner</th></tr>
+    <tr><th>Pièce</th><th>Référence</th><th>Quantité</th><th>Seuil d'alerte</th><th>Réapprovisionner</th><th>Supprimer</th></tr>
     {% for p in pieces %}
     <tr>
         <td>{{ p["nom"] }}</td>
@@ -14,6 +14,12 @@
             <form method="post" action="{{ url_for('reapprovisionner_piece', piece_id=p['id']) }}">
                 <input type="number" name="quantite" min="1" value="1" style="width:4em">
                 <button type="submit">Ajouter au stock</button>
+            </form>
+        </td>
+        <td>
+            <form method="post" action="{{ url_for('supprimer_piece', piece_id=p['id']) }}"
+                  onsubmit="return confirm('Supprimer cette pièce ?');">
+                <button type="submit">Supprimer</button>
             </form>
         </td>
     </tr>

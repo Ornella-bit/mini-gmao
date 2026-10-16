@@ -322,6 +322,18 @@ def reapprovisionner_piece(piece_id):
         connexion.close()
     return redirect(url_for("liste_pieces"))
 
+@app.route("/pieces/<int:piece_id>/supprimer", methods=["POST"])
+def supprimer_piece(piece_id):
+    connexion = get_db()
+    utilisee = connexion.execute(
+        "SELECT COUNT(*) FROM interventions_pieces WHERE piece_id = ?", (piece_id,)
+    ).fetchone()[0]
+    if utilisee == 0:    # une pièce déjà utilisée reste en base, pour garder l'historique
+        connexion.execute("DELETE FROM pieces WHERE id = ?", (piece_id,))
+        connexion.commit()
+    connexion.close()
+    return redirect(url_for("liste_pieces"))
+
 if __name__ == "__main__":
     app.run(debug=True)
     
