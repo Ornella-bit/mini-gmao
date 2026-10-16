@@ -1,2 +1,2 @@
 # mini-gmao
-Gestion de maintenance - Gestionnaire de Stocks
+Gestion de maintenance - Gestion de Stocks
