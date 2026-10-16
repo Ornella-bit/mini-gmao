@@ -13,3 +13,14 @@ CREATE TABLE IF NOT EXISTS equipements (
     date_installation TEXT,
     FOREIGN KEY (lieu_id) REFERENCES lieux (id)
 );
+
+CREATE TABLE IF NOT EXISTS pannes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    equipement_id INTEGER NOT NULL,
+    date_declaration TEXT NOT NULL,
+    description TEXT NOT NULL,
+    gravite TEXT NOT NULL DEFAULT 'Moyenne',
+    statut TEXT NOT NULL DEFAULT 'Ouverte',
+    FOREIGN KEY (equipement_id) REFERENCES equipements (id)
+);
+

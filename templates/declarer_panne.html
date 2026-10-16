@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Déclarer une panne</h1>
+<form method="post">
+    <p><label>Équipement<br>
+        <select name="equipement_id" required>
+            {% for e in equipements %}
+            <option value="{{ e['id'] }}">{{ e['nom'] }}</option>
+            {% endfor %}
+        </select>
+    </label></p>
+    <p><label>Description<br>
+        <textarea name="description" rows="3" cols="40" required></textarea></label></p>
+    <p><label>Gravité<br>
+        <select name="gravite">
+            <option>Faible</option>
+            <option selected>Moyenne</option>
+            <option>Critique</option>
+        </select>
+    </label></p>
+    <button type="submit">Enregistrer</button>
+    <a href="{{ url_for('liste_pannes') }}">Annuler</a>
+</form>
+{% endblock %}

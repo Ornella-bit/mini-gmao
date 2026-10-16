@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, abort
+from datetime import date
 
 DB = Path(__file__).parent / "gmao.db"
 
@@ -94,10 +95,84 @@ def modifier_equipement(equipement_id):
 @app.route("/equipements/<int:equipement_id>/supprimer", methods=["POST"])
 def supprimer_equipement(equipement_id):
     connexion = get_db()
+    connexion.execute("DELETE FROM pannes WHERE equipement_id = ?", (equipement_id,))
     connexion.execute("DELETE FROM equipements WHERE id = ?", (equipement_id,))
     connexion.commit()
     connexion.close()
     return redirect(url_for("liste_equipements"))
+
+@app.route("/pannes")
+def liste_pannes():
+    connexion = get_db()
+    pannes = connexion.execute(
+        """SELECT pannes.id, pannes.date_declaration, pannes.description,
+                  pannes.gravite, pannes.statut, equipements.nom AS equipement
+           FROM pannes
+           JOIN equipements ON pannes.equipement_id = equipements.id
+           ORDER BY (pannes.statut = 'Résolue'), pannes.date_declaration DESC"""
+    ).fetchall()
+    connexion.close()
+    return render_template("pannes.html", pannes=pannes)
+
+
+@app.route("/pannes/declarer", methods=["GET", "POST"])
+def declarer_panne():
+    connexion = get_db()
+    if request.method == "POST":
+        description = request.form["description"].strip()
+        equipement_id = request.form["equipement_id"]
+        if description:
+            connexion.execute(
+                "INSERT INTO pannes (equipement_id, date_declaration, description, gravite) "
+                "VALUES (?, ?, ?, ?)",
+                (equipement_id, date.today().isoformat(), description, request.form["gravite"]),
+            )
+            connexion.execute(
+                "UPDATE equipements SET etat = 'En panne' WHERE id = ?", (equipement_id,)
+            )
+            connexion.commit()
+            connexion.close()
+            return redirect(url_for("liste_pannes"))
+    equipements = connexion.execute(
+        "SELECT id, nom FROM equipements ORDER BY nom"
+    ).fetchall()
+    connexion.close()
+    return render_template("declarer_panne.html", equipements=equipements)
+
+
+@app.route("/pannes/<int:panne_id>/statut", methods=["POST"])
+def changer_statut_panne(panne_id):
+    nouveau_statut = request.form["statut"]
+    if nouveau_statut not in ("Ouverte", "En cours", "Résolue"):
+        abort(400)
+    connexion = get_db()
+    panne = connexion.execute(
+        "SELECT equipement_id FROM pannes WHERE id = ?", (panne_id,)
+    ).fetchone()
+    if panne is None:
+        connexion.close()
+        abort(404)
+
+    connexion.execute("UPDATE pannes SET statut = ? WHERE id = ?", (nouveau_statut, panne_id))
+
+    if nouveau_statut == "Résolue":
+        restantes = connexion.execute(
+            "SELECT COUNT(*) FROM pannes WHERE equipement_id = ? AND statut != 'Résolue'",
+            (panne["equipement_id"],),
+        ).fetchone()[0]
+        if restantes == 0:    # plus aucune panne ouverte : l'équipement est réparé
+            connexion.execute(
+                "UPDATE equipements SET etat = 'En service' WHERE id = ?",
+                (panne["equipement_id"],),
+            )
+    else:
+        connexion.execute(
+            "UPDATE equipements SET etat = 'En panne' WHERE id = ?",
+            (panne["equipement_id"],),
+        )
+    connexion.commit()
+    connexion.close()
+    return redirect(url_for("liste_pannes"))
 
 if __name__ == "__main__":
     app.run(debug=True)
