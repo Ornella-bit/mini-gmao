@@ -1,5 +1,43 @@
 {% extends "base.html" %}
 {% block contenu %}
-<h1>Mini-GMAO</h1>
-<p>Gestion de maintenance : équipements, pannes, interventions et stock de pièces.</p>
+<h1>Tableau de bord</h1>
+
+<div class="cartes">
+    <div class="carte"><span class="chiffre">{{ stats.equipements }}</span>Équipements</div>
+    <div class="carte {% if stats.en_panne %}alerte{% endif %}">
+        <span class="chiffre">{{ stats.en_panne }}</span>En panne</div>
+    <div class="carte {% if stats.pannes_ouvertes %}alerte{% endif %}">
+        <span class="chiffre">{{ stats.pannes_ouvertes }}</span>Pannes non résolues</div>
+    <div class="carte {% if stats.stock_bas %}alerte{% endif %}">
+        <span class="chiffre">{{ stats.stock_bas }}</span>Pièces en stock bas</div>
+</div>
+
+<h2>Pannes à traiter</h2>
+{% if pannes_en_cours %}
+<table>
+    <tr><th>Date</th><th>Équipement</th><th>Description</th><th>Gravité</th><th>Statut</th></tr>
+    {% for p in pannes_en_cours %}
+    <tr>
+        <td>{{ p["date_declaration"] }}</td>
+        <td>{{ p["equipement"] }}</td>
+        <td>{{ p["description"] }}</td>
+        <td>{{ p["gravite"] }}</td>
+        <td>{{ p["statut"] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>Aucune panne en cours.</p>
+{% endif %}
+
+<h2>Pièces à réapprovisionner</h2>
+{% if pieces_basses %}
+<ul>
+    {% for p in pieces_basses %}
+    <li>{{ p["nom"] }} : {{ p["quantite"] }} en stock (seuil : {{ p["seuil_alerte"] }})</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>Le stock est suffisant.</p>
+{% endif %}
 {% endblock %}

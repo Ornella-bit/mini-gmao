@@ -16,8 +16,35 @@ def get_db():
 
 @app.route("/")
 def accueil():
-    return render_template("accueil.html")
-
+    connexion = get_db()
+    stats = {
+        "equipements": connexion.execute(
+            "SELECT COUNT(*) FROM equipements").fetchone()[0],
+        "en_panne": connexion.execute(
+            "SELECT COUNT(*) FROM equipements WHERE etat = 'En panne'").fetchone()[0],
+        "pannes_ouvertes": connexion.execute(
+            "SELECT COUNT(*) FROM pannes WHERE statut != 'Résolue'").fetchone()[0],
+        "stock_bas": connexion.execute(
+            "SELECT COUNT(*) FROM pieces WHERE quantite <= seuil_alerte").fetchone()[0],
+    }
+    pannes_en_cours = connexion.execute(
+        """SELECT pannes.date_declaration, pannes.description, pannes.gravite,
+                  pannes.statut, equipements.nom AS equipement
+           FROM pannes
+           JOIN equipements ON pannes.equipement_id = equipements.id
+           WHERE pannes.statut != 'Résolue'
+           ORDER BY pannes.date_declaration DESC
+           LIMIT 5"""
+    ).fetchall()
+    pieces_basses = connexion.execute(
+        "SELECT nom, quantite, seuil_alerte FROM pieces "
+        "WHERE quantite <= seuil_alerte ORDER BY nom"
+    ).fetchall()
+    connexion.close()
+    return render_template(
+        "accueil.html",
+        stats=stats, pannes_en_cours=pannes_en_cours, pieces_basses=pieces_basses,
+    )
 
 @app.route("/equipements")
 def liste_equipements():
