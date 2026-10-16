@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>{{ equipement['nom'] }}</h1>
+<ul>
+    <li>Catégorie : {{ equipement['categorie'] }}</li>
+    <li>Lieu : {{ equipement['lieu'] }}</li>
+    <li>État : {{ equipement['etat'] }}</li>
+    <li>Installé le : {{ equipement['date_installation'] or 'non renseigné' }}</li>
+</ul>
+
+<h2>Historique des pannes</h2>
+{% for p in pannes %}
+<h3>{{ p['date_declaration'] }} : {{ p['description'] }}
+    ({{ p['gravite'] }}, {{ p['statut'] }})</h3>
+<ul>
+    {% for i in interventions if i['panne_id'] == p['id'] %}
+    <li>{{ i['date_intervention'] }} : {{ i['technicien'] }} : {{ i['description'] }}
+        {% if i['duree_heures'] %}({{ i['duree_heures'] }} h){% endif %}</li>
+    {% else %}
+    <li>Aucune intervention</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>Aucune panne enregistrée.</p>
+{% endfor %}
+
+<p><a href="{{ url_for('liste_equipements') }}">← Retour aux équipements</a></p>
+{% endblock %}

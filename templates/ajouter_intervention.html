@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Nouvelle intervention</h1>
+<p><strong>{{ panne['equipement'] }}</strong> : {{ panne['description'] }}</p>
+<form method="post">
+    <p><label>Technicien<br><input type="text" name="technicien" required></label></p>
+    <p><label>Travaux réalisés<br>
+        <textarea name="description" rows="3" cols="40" required></textarea></label></p>
+    <p><label>Durée (heures)<br>
+        <input type="number" name="duree_heures" min="0" step="0.5"></label></p>
+    <button type="submit">Enregistrer</button>
+    <a href="{{ url_for('liste_pannes') }}">Annuler</a>
+</form>
+{% endblock %}

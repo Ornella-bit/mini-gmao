@@ -24,3 +24,13 @@ CREATE TABLE IF NOT EXISTS pannes (
     FOREIGN KEY (equipement_id) REFERENCES equipements (id)
 );
 
+CREATE TABLE IF NOT EXISTS interventions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    panne_id INTEGER NOT NULL,
+    date_intervention TEXT NOT NULL,
+    technicien TEXT NOT NULL,
+    description TEXT NOT NULL,
+    duree_heures REAL,
+    FOREIGN KEY (panne_id) REFERENCES pannes (id)
+);
+

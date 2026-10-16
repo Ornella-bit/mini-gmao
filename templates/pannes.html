@@ -3,7 +3,7 @@
 <h1>Pannes</h1>
 <p><a href="{{ url_for('declarer_panne') }}">+ Déclarer une panne</a></p>
 <table border="1" cellpadding="6">
-    <tr><th>Date</th><th>Équipement</th><th>Description</th><th>Gravité</th><th>Statut</th></tr>
+       <tr><th>Date</th><th>Équipement</th><th>Description</th><th>Gravité</th><th>Statut</th><th>Actions</th></tr>
     {% for p in pannes %}
     <tr>
         <td>{{ p["date_declaration"] }}</td>
@@ -19,6 +19,7 @@
                 </select>
             </form>
         </td>
+        <td><a href="{{ url_for('ajouter_intervention', panne_id=p['id']) }}">+ Intervention</a></td>
     </tr>
     {% endfor %}
 </table>

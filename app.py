@@ -95,6 +95,11 @@ def modifier_equipement(equipement_id):
 @app.route("/equipements/<int:equipement_id>/supprimer", methods=["POST"])
 def supprimer_equipement(equipement_id):
     connexion = get_db()
+    connexion.execute(
+        "DELETE FROM interventions WHERE panne_id IN "
+        "(SELECT id FROM pannes WHERE equipement_id = ?)",
+        (equipement_id,),
+    )
     connexion.execute("DELETE FROM pannes WHERE equipement_id = ?", (equipement_id,))
     connexion.execute("DELETE FROM equipements WHERE id = ?", (equipement_id,))
     connexion.commit()
@@ -173,6 +178,76 @@ def changer_statut_panne(panne_id):
     connexion.commit()
     connexion.close()
     return redirect(url_for("liste_pannes"))
+
+@app.route("/pannes/<int:panne_id>/intervention", methods=["GET", "POST"])
+def ajouter_intervention(panne_id):
+    connexion = get_db()
+    panne = connexion.execute(
+        """SELECT pannes.id, pannes.description, pannes.statut,
+                  equipements.nom AS equipement
+           FROM pannes
+           JOIN equipements ON pannes.equipement_id = equipements.id
+           WHERE pannes.id = ?""",
+        (panne_id,),
+    ).fetchone()
+    if panne is None:
+        connexion.close()
+        abort(404)
+
+    if request.method == "POST":
+        technicien = request.form["technicien"].strip()
+        description = request.form["description"].strip()
+        duree = request.form["duree_heures"] or None
+        if technicien and description:
+            connexion.execute(
+                "INSERT INTO interventions "
+                "(panne_id, date_intervention, technicien, description, duree_heures) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (panne_id, date.today().isoformat(), technicien, description, duree),
+            )
+            if panne["statut"] == "Ouverte":    # la panne est prise en charge
+                connexion.execute(
+                    "UPDATE pannes SET statut = 'En cours' WHERE id = ?", (panne_id,)
+                )
+            connexion.commit()
+            connexion.close()
+            return redirect(url_for("liste_pannes"))
+
+    connexion.close()
+    return render_template("ajouter_intervention.html", panne=panne)
+
+
+@app.route("/equipements/<int:equipement_id>")
+def detail_equipement(equipement_id):
+    connexion = get_db()
+    equipement = connexion.execute(
+        """SELECT equipements.*, lieux.nom AS lieu
+           FROM equipements
+           JOIN lieux ON equipements.lieu_id = lieux.id
+           WHERE equipements.id = ?""",
+        (equipement_id,),
+    ).fetchone()
+    if equipement is None:
+        connexion.close()
+        abort(404)
+
+    pannes = connexion.execute(
+        "SELECT * FROM pannes WHERE equipement_id = ? ORDER BY date_declaration DESC",
+        (equipement_id,),
+    ).fetchall()
+    interventions = connexion.execute(
+        """SELECT interventions.*
+           FROM interventions
+           JOIN pannes ON interventions.panne_id = pannes.id
+           WHERE pannes.equipement_id = ?
+           ORDER BY interventions.date_intervention DESC""",
+        (equipement_id,),
+    ).fetchall()
+    connexion.close()
+    return render_template(
+        "detail_equipement.html",
+        equipement=equipement, pannes=pannes, interventions=interventions,
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
