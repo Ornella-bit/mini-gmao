@@ -34,3 +34,20 @@ CREATE TABLE IF NOT EXISTS interventions (
     FOREIGN KEY (panne_id) REFERENCES pannes (id)
 );
 
+CREATE TABLE IF NOT EXISTS pieces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    reference TEXT,
+    quantite INTEGER NOT NULL DEFAULT 0,
+    seuil_alerte INTEGER NOT NULL DEFAULT 2
+);
+
+CREATE TABLE IF NOT EXISTS interventions_pieces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    intervention_id INTEGER NOT NULL,
+    piece_id INTEGER NOT NULL,
+    quantite INTEGER NOT NULL,
+    FOREIGN KEY (intervention_id) REFERENCES interventions (id),
+    FOREIGN KEY (piece_id) REFERENCES pieces (id)
+);
+

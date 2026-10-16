@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Ajouter une pièce</h1>
+<form method="post">
+    <p><label>Nom<br><input type="text" name="nom" required></label></p>
+    <p><label>Référence<br><input type="text" name="reference"></label></p>
+    <p><label>Quantité en stock<br>
+        <input type="number" name="quantite" min="0" value="0" required></label></p>
+    <p><label>Seuil d'alerte<br>
+        <input type="number" name="seuil_alerte" min="0" value="2" required></label></p>
+    <button type="submit">Enregistrer</button>
+    <a href="{{ url_for('liste_pieces') }}">Annuler</a>
+</form>
+{% endblock %}

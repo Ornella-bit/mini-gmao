@@ -28,5 +28,16 @@ if connexion.execute("SELECT COUNT(*) FROM lieux").fetchone()[0] == 0:
     )
     connexion.commit()
 
+if connexion.execute("SELECT COUNT(*) FROM pieces").fetchone()[0] == 0:
+    connexion.executemany(
+        "INSERT INTO pieces (nom, reference, quantite, seuil_alerte) VALUES (?, ?, ?, ?)",
+        [
+            ("Joint de raccord 15 mm", "PL-001", 20, 5),
+            ("Condensateur de démarrage", "EL-014", 3, 2),
+            ("Filtre à air", "CL-007", 6, 2),
+        ],
+    )
+    connexion.commit() 
+
 connexion.close()
 print("Base de données prête.")

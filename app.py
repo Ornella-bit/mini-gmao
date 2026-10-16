@@ -96,6 +96,12 @@ def modifier_equipement(equipement_id):
 def supprimer_equipement(equipement_id):
     connexion = get_db()
     connexion.execute(
+        "DELETE FROM interventions_pieces WHERE intervention_id IN "
+        "(SELECT id FROM interventions WHERE panne_id IN "
+        "(SELECT id FROM pannes WHERE equipement_id = ?))",
+        (equipement_id,),
+    )
+    connexion.execute(
         "DELETE FROM interventions WHERE panne_id IN "
         "(SELECT id FROM pannes WHERE equipement_id = ?)",
         (equipement_id,),
@@ -194,18 +200,42 @@ def ajouter_intervention(panne_id):
         connexion.close()
         abort(404)
 
+    pieces = connexion.execute("SELECT * FROM pieces ORDER BY nom").fetchall()
+    erreur = None
+
     if request.method == "POST":
         technicien = request.form["technicien"].strip()
         description = request.form["description"].strip()
         duree = request.form["duree_heures"] or None
-        if technicien and description:
-            connexion.execute(
+
+        # Pièces utilisées : on vérifie le stock avant d'enregistrer quoi que ce soit
+        pieces_utilisees = []
+        for p in pieces:
+            quantite = int(request.form.get(f"piece_{p['id']}") or 0)
+            if quantite > p["quantite"]:
+                erreur = f"Stock insuffisant pour {p['nom']} (disponible : {p['quantite']})."
+            elif quantite > 0:
+                pieces_utilisees.append((p["id"], quantite))
+
+        if technicien and description and erreur is None:
+            curseur = connexion.execute(
                 "INSERT INTO interventions "
                 "(panne_id, date_intervention, technicien, description, duree_heures) "
                 "VALUES (?, ?, ?, ?, ?)",
                 (panne_id, date.today().isoformat(), technicien, description, duree),
             )
-            if panne["statut"] == "Ouverte":    # la panne est prise en charge
+            intervention_id = curseur.lastrowid
+            for piece_id, quantite in pieces_utilisees:
+                connexion.execute(
+                    "INSERT INTO interventions_pieces (intervention_id, piece_id, quantite) "
+                    "VALUES (?, ?, ?)",
+                    (intervention_id, piece_id, quantite),
+                )
+                connexion.execute(
+                    "UPDATE pieces SET quantite = quantite - ? WHERE id = ?",
+                    (quantite, piece_id),
+                )
+            if panne["statut"] == "Ouverte":
                 connexion.execute(
                     "UPDATE pannes SET statut = 'En cours' WHERE id = ?", (panne_id,)
                 )
@@ -214,8 +244,9 @@ def ajouter_intervention(panne_id):
             return redirect(url_for("liste_pannes"))
 
     connexion.close()
-    return render_template("ajouter_intervention.html", panne=panne)
-
+    return render_template(
+        "ajouter_intervention.html", panne=panne, pieces=pieces, erreur=erreur
+    )
 
 @app.route("/equipements/<int:equipement_id>")
 def detail_equipement(equipement_id):
@@ -248,6 +279,48 @@ def detail_equipement(equipement_id):
         "detail_equipement.html",
         equipement=equipement, pannes=pannes, interventions=interventions,
     )
+
+@app.route("/pieces")
+def liste_pieces():
+    connexion = get_db()
+    pieces = connexion.execute("SELECT * FROM pieces ORDER BY nom").fetchall()
+    connexion.close()
+    return render_template("pieces.html", pieces=pieces)
+
+
+@app.route("/pieces/ajouter", methods=["GET", "POST"])
+def ajouter_piece():
+    if request.method == "POST":
+        nom = request.form["nom"].strip()
+        if nom:
+            connexion = get_db()
+            connexion.execute(
+                "INSERT INTO pieces (nom, reference, quantite, seuil_alerte) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    nom,
+                    request.form["reference"].strip() or None,
+                    request.form["quantite"],
+                    request.form["seuil_alerte"],
+                ),
+            )
+            connexion.commit()
+            connexion.close()
+            return redirect(url_for("liste_pieces"))
+    return render_template("ajouter_piece.html")
+
+
+@app.route("/pieces/<int:piece_id>/reapprovisionner", methods=["POST"])
+def reapprovisionner_piece(piece_id):
+    quantite = int(request.form["quantite"])
+    if quantite > 0:
+        connexion = get_db()
+        connexion.execute(
+            "UPDATE pieces SET quantite = quantite + ? WHERE id = ?", (quantite, piece_id)
+        )
+        connexion.commit()
+        connexion.close()
+    return redirect(url_for("liste_pieces"))
 
 if __name__ == "__main__":
     app.run(debug=True)

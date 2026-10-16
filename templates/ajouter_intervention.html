@@ -2,12 +2,23 @@
 {% block contenu %}
 <h1>Nouvelle intervention</h1>
 <p><strong>{{ panne['equipement'] }}</strong> : {{ panne['description'] }}</p>
+{% if erreur %}<p style="color:red">{{ erreur }}</p>{% endif %}
 <form method="post">
     <p><label>Technicien<br><input type="text" name="technicien" required></label></p>
     <p><label>Travaux réalisés<br>
         <textarea name="description" rows="3" cols="40" required></textarea></label></p>
     <p><label>Durée (heures)<br>
         <input type="number" name="duree_heures" min="0" step="0.5"></label></p>
+    <fieldset>
+        <legend>Pièces utilisées</legend>
+        {% for p in pieces %}
+        <p><label>{{ p['nom'] }} (stock : {{ p['quantite'] }})
+            <input type="number" name="piece_{{ p['id'] }}" min="0" max="{{ p['quantite'] }}"
+                   value="0" style="width:4em"></label></p>
+        {% else %}
+        <p>Aucune pièce en stock.</p>
+        {% endfor %}
+    </fieldset>
     <button type="submit">Enregistrer</button>
     <a href="{{ url_for('liste_pannes') }}">Annuler</a>
 </form>
