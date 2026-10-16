@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Équipements</h1>
+<table border="1" cellpadding="6">
+    <tr><th>Nom</th><th>Catégorie</th><th>Lieu</th><th>État</th></tr>
+    {% for e in equipements %}
+    <tr>
+        <td>{{ e["nom"] }}</td>
+        <td>{{ e["categorie"] }}</td>
+        <td>{{ e["lieu"] }}</td>
+        <td>{{ e["etat"] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
