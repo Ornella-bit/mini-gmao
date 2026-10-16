@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
 
 DB = Path(__file__).parent / "gmao.db"
 
@@ -31,6 +31,30 @@ def liste_equipements():
     connexion.close()
     return render_template("equipements.html", equipements=equipements)
 
+@app.route("/equipements/ajouter", methods=["GET", "POST"])
+def ajouter_equipement():
+    connexion = get_db()
+
+    if request.method == "POST":
+        nom = request.form["nom"].strip()
+        categorie = request.form["categorie"].strip()
+        lieu_id = request.form["lieu_id"]
+        etat = request.form["etat"]
+        date_installation = request.form["date_installation"] or None
+
+        if nom and categorie:
+            connexion.execute(
+                "INSERT INTO equipements (nom, categorie, lieu_id, etat, date_installation) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (nom, categorie, lieu_id, etat, date_installation),
+            )
+            connexion.commit()
+            connexion.close()
+            return redirect(url_for("liste_equipements"))
+
+    lieux = connexion.execute("SELECT id, nom FROM lieux ORDER BY nom").fetchall()
+    connexion.close()
+    return render_template("ajouter_equipement.html", lieux=lieux)
 
 if __name__ == "__main__":
     app.run(debug=True)

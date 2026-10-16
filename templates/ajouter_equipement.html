@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Ajouter un équipement</h1>
+<form method="post">
+    <p><label>Nom<br><input type="text" name="nom" required></label></p>
+    <p><label>Catégorie<br><input type="text" name="categorie" required></label></p>
+    <p><label>Lieu<br>
+        <select name="lieu_id" required>
+            {% for l in lieux %}
+            <option value="{{ l['id'] }}">{{ l['nom'] }}</option>
+            {% endfor %}
+        </select>
+    </label></p>
+    <p><label>État<br>
+        <select name="etat">
+            <option>En service</option>
+            <option>En panne</option>
+            <option>Hors service</option>
+        </select>
+    </label></p>
+    <p><label>Date d'installation<br><input type="date" name="date_installation"></label></p>
+    <button type="submit">Enregistrer</button>
+</form>
+{% endblock %}
