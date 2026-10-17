@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
 from datetime import date
 
 DB = Path(__file__).parent / "gmao.db"
@@ -360,6 +360,152 @@ def supprimer_piece(piece_id):
         connexion.commit()
     connexion.close()
     return redirect(url_for("liste_pieces"))
+
+# ---------------------------------------------------------------
+# API JSON (pour l'application mobile)
+# ---------------------------------------------------------------
+
+@app.route("/api/equipements")
+def api_equipements():
+    connexion = get_db()
+    lignes = connexion.execute(
+        """SELECT equipements.id, equipements.nom, equipements.categorie,
+                  equipements.etat, equipements.date_installation,
+                  lieux.nom AS lieu
+           FROM equipements
+           JOIN lieux ON equipements.lieu_id = lieux.id
+           ORDER BY equipements.nom"""
+    ).fetchall()
+    connexion.close()
+    return jsonify([dict(ligne) for ligne in lignes])
+
+
+@app.route("/api/equipements/<int:equipement_id>")
+def api_detail_equipement(equipement_id):
+    connexion = get_db()
+    equipement = connexion.execute(
+        """SELECT equipements.*, lieux.nom AS lieu
+           FROM equipements
+           JOIN lieux ON equipements.lieu_id = lieux.id
+           WHERE equipements.id = ?""",
+        (equipement_id,),
+    ).fetchone()
+    if equipement is None:
+        connexion.close()
+        return jsonify({"erreur": "Équipement introuvable"}), 404
+
+    pannes = connexion.execute(
+        "SELECT * FROM pannes WHERE equipement_id = ? ORDER BY date_declaration DESC",
+        (equipement_id,),
+    ).fetchall()
+    interventions = connexion.execute(
+        """SELECT interventions.*
+           FROM interventions
+           JOIN pannes ON interventions.panne_id = pannes.id
+           WHERE pannes.equipement_id = ?
+           ORDER BY interventions.date_intervention DESC""",
+        (equipement_id,),
+    ).fetchall()
+    connexion.close()
+    return jsonify({
+        **dict(equipement),
+        "pannes": [dict(p) for p in pannes],
+        "interventions": [dict(i) for i in interventions],
+    })
+
+
+@app.route("/api/pannes")
+def api_pannes():
+    connexion = get_db()
+    lignes = connexion.execute(
+        """SELECT pannes.id, pannes.date_declaration, pannes.description,
+                  pannes.gravite, pannes.statut, equipements.nom AS equipement
+           FROM pannes
+           JOIN equipements ON pannes.equipement_id = equipements.id
+           ORDER BY (pannes.statut = 'Résolue'), pannes.date_declaration DESC"""
+    ).fetchall()
+    connexion.close()
+    return jsonify([dict(ligne) for ligne in lignes])
+
+
+@app.route("/api/pieces")
+def api_pieces():
+    connexion = get_db()
+    lignes = connexion.execute("SELECT * FROM pieces ORDER BY nom").fetchall()
+    connexion.close()
+    return jsonify([dict(ligne) for ligne in lignes])
+
+
+@app.route("/api/pannes/<int:panne_id>/interventions", methods=["POST"])
+def api_ajouter_intervention(panne_id):
+    donnees = request.get_json(silent=True) or {}
+    technicien = (donnees.get("technicien") or "").strip()
+    description = (donnees.get("description") or "").strip()
+    pieces_demandees = donnees.get("pieces") or {}    # ex. {"3": 2} = 2 pièces n°3
+
+    if not technicien or not description:
+        return jsonify({"erreur": "Technicien et description obligatoires"}), 400
+
+    try:
+        duree = donnees.get("duree_heures")
+        duree = float(duree) if duree not in (None, "") else None
+    except (TypeError, ValueError):
+        return jsonify({"erreur": "Durée invalide"}), 400
+
+    connexion = get_db()
+    panne = connexion.execute(
+        "SELECT id, statut FROM pannes WHERE id = ?", (panne_id,)
+    ).fetchone()
+    if panne is None:
+        connexion.close()
+        return jsonify({"erreur": "Panne introuvable"}), 404
+
+    # Vérification du stock avant d'enregistrer quoi que ce soit
+    pieces_utilisees = []
+    for piece_id, quantite in pieces_demandees.items():
+        try:
+            piece_id, quantite = int(piece_id), int(quantite)
+        except (TypeError, ValueError):
+            connexion.close()
+            return jsonify({"erreur": "Pièces invalides"}), 400
+        if quantite <= 0:
+            continue
+        piece = connexion.execute(
+            "SELECT nom, quantite FROM pieces WHERE id = ?", (piece_id,)
+        ).fetchone()
+        if piece is None:
+            connexion.close()
+            return jsonify({"erreur": f"Pièce {piece_id} introuvable"}), 400
+        if quantite > piece["quantite"]:
+            connexion.close()
+            return jsonify({
+                "erreur": f"Stock insuffisant pour {piece['nom']} "
+                          f"(disponible : {piece['quantite']})"
+            }), 400
+        pieces_utilisees.append((piece_id, quantite))
+
+    curseur = connexion.execute(
+        "INSERT INTO interventions "
+        "(panne_id, date_intervention, technicien, description, duree_heures) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (panne_id, date.today().isoformat(), technicien, description, duree),
+    )
+    intervention_id = curseur.lastrowid
+    for piece_id, quantite in pieces_utilisees:
+        connexion.execute(
+            "INSERT INTO interventions_pieces (intervention_id, piece_id, quantite) "
+            "VALUES (?, ?, ?)",
+            (intervention_id, piece_id, quantite),
+        )
+        connexion.execute(
+            "UPDATE pieces SET quantite = quantite - ? WHERE id = ?",
+            (quantite, piece_id),
+        )
+    if panne["statut"] == "Ouverte":
+        connexion.execute("UPDATE pannes SET statut = 'En cours' WHERE id = ?", (panne_id,))
+    connexion.commit()
+    connexion.close()
+    return jsonify({"id": intervention_id}), 201
 
 if __name__ == "__main__":
     app.run(debug=True)
