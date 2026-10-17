@@ -7,11 +7,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    {% set chemin = request.path %}
     <nav>
-        <a href="/">Accueil</a>
-        <a href="/equipements">Équipements</a>
-        <a href="/pannes">Pannes</a>
-        <a href="/pieces">Stock</a>
+        <a href="/" class="{% if chemin == '/' %}actif{% endif %}">Accueil</a>
+        <a href="/equipements" class="{% if chemin.startswith('/equipements') %}actif{% endif %}">Équipements</a>
+        <a href="/pannes" class="{% if chemin.startswith('/pannes') %}actif{% endif %}">Pannes</a>
+        <a href="/pieces" class="{% if chemin.startswith('/pieces') %}actif{% endif %}">Stock</a>
     </nav>
     <main>
         {% block contenu %}{% endblock %}

@@ -9,14 +9,25 @@ nav {
     background: #1f3a5f;
     padding: 12px 24px;
 }
-nav a {
+nav a,
+nav a:link,
+nav a:visited {
     color: white;
     text-decoration: none;
     margin-right: 20px;
     font-weight: bold;
+    border-bottom: 3px solid transparent;
+    padding-bottom: 6px;
+    transition: border-color 0.15s ease, color 0.15s ease;
 }
 nav a:hover {
-    text-decoration: underline;
+    color: white;
+    border-bottom-color: rgba(255, 255, 255, 0.6);
+}
+nav a.actif,
+nav a.actif:visited {
+    color: #ffd166;
+    border-bottom-color: #ffd166;
 }
 
 main {
@@ -81,4 +92,3 @@ input, select, textarea {
     font-size: 2rem;
     font-weight: bold;
 }
-

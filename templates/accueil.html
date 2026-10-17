@@ -1,5 +1,65 @@
 {% extends "base.html" %}
 {% block contenu %}
+<style>
+    /* Bandeau de présentation */
+    .presentation {
+        padding: 1.75rem 2rem;
+        margin-bottom: 2rem;
+        color: #fff;
+        background: linear-gradient(135deg, #1e3a5f, #2f6aa3);
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(30, 58, 95, 0.25);
+    }
+    .presentation .nom { margin: 0; font-size: 2.2rem; font-weight: bold; letter-spacing: 0.5px; }
+    .presentation .sous-titre { margin: 0.4rem 0 0; font-size: 1.1rem; opacity: 0.9; }
+
+    /* Cartes de chiffres : léger effet au survol */
+    .carte { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .carte:hover { transform: translateY(-4px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12); }
+
+    /* Deux blocs côte à côte */
+        .duo {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-top: 2rem;
+        align-items: stretch;
+    }
+    .panneau {
+        background: #fff;
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+    .panneau h2 { margin-top: 0; font-size: 1.3rem; }
+    .panneau .defilement { overflow-x: auto; }
+    .panneau ul { margin: 0; padding-left: 1.2rem; }
+    .panneau li { margin-bottom: 0.5rem; }
+
+    /* Étiquettes de statut et de gravité */
+    .badge {
+        display: inline-block;
+        padding: 0.15rem 0.6rem;
+        font-size: 0.85rem;
+        font-weight: bold;
+        border-radius: 999px;
+        background: #e6e9ee;
+        color: #333;
+    }
+    .badge.ouverte { background: #fde2e2; color: #b42318; }
+    .badge.en-cours { background: #fff1d6; color: #a15c00; }
+
+    /* Sur téléphone ou petit écran : un bloc sous l'autre */
+    @media (max-width: 900px) {
+        .duo { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="presentation">
+    <p class="nom">Mini-GMAO</p>
+    <p class="sous-titre">Logiciel de suivi des équipements, des pannes et des interventions</p>
+</div>
+
 <h1>Tableau de bord</h1>
 
 <div class="cartes">
@@ -12,32 +72,40 @@
         <span class="chiffre">{{ stats.stock_bas }}</span>Pièces en stock bas</div>
 </div>
 
-<h2>Pannes à traiter</h2>
-{% if pannes_en_cours %}
-<table>
-    <tr><th>Date</th><th>Équipement</th><th>Description</th><th>Gravité</th><th>Statut</th></tr>
-    {% for p in pannes_en_cours %}
-    <tr>
-        <td>{{ p["date_declaration"] }}</td>
-        <td>{{ p["equipement"] }}</td>
-        <td>{{ p["description"] }}</td>
-        <td>{{ p["gravite"] }}</td>
-        <td>{{ p["statut"] }}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}
-<p>Aucune panne en cours.</p>
-{% endif %}
+<div class="duo">
+    <section class="panneau">
+        <h2>🔧 Pannes à traiter</h2>
+        {% if pannes_en_cours %}
+        <div class="defilement">
+        <table>
+            <tr><th>Date</th><th>Équipement</th><th>Description</th><th>Gravité</th><th>Statut</th></tr>
+            {% for p in pannes_en_cours %}
+            <tr>
+                <td>{{ p["date_declaration"] }}</td>
+                <td>{{ p["equipement"] }}</td>
+                <td>{{ p["description"] }}</td>
+                <td><span class="badge">{{ p["gravite"] }}</span></td>
+                <td><span class="badge {{ p['statut']|lower|replace(' ', '-') }}">{{ p["statut"] }}</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+        </div>
+        {% else %}
+        <p>✅ Aucune panne en cours.</p>
+        {% endif %}
+    </section>
 
-<h2>Pièces à réapprovisionner</h2>
-{% if pieces_basses %}
-<ul>
-    {% for p in pieces_basses %}
-    <li>{{ p["nom"] }} : {{ p["quantite"] }} en stock (seuil : {{ p["seuil_alerte"] }})</li>
-    {% endfor %}
-</ul>
-{% else %}
-<p>Le stock est suffisant.</p>
-{% endif %}
+    <section class="panneau">
+        <h2>📦 Pièces à réapprovisionner</h2>
+        {% if pieces_basses %}
+        <ul>
+            {% for p in pieces_basses %}
+            <li>{{ p["nom"] }} : {{ p["quantite"] }} en stock (seuil : {{ p["seuil_alerte"] }})</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>✅ Le stock est suffisant.</p>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}
